@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TurnOffPDNS</string>
+    <string name="channel_name">Service</string>
+    <string name="notification_text">Watching network changes</string>
+
+    <string name="label_enabled">Enabled</string>
+    <string name="label_home_networks">Home: subnets or IPs of the network DNS servers (one per line)</string>
+    <string name="hint_home_networks">192.168.1.0/24\n10.0.0.53</string>
+    <string name="label_home_mode">At home: what to do with Android Private DNS</string>
+    <string name="mode_off">Off: use the home DNS (recommended)</string>
+    <string name="mode_auto">Automatic: still use the home DNS, encrypted (DNS-over-TLS) if your DNS supports it</string>
+    <string name="label_away_hostname">Away: use this Private DNS</string>
+    <string name="label_theme">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="save">Save</string>
+    <string name="saved">Saved</string>
+
+    <string name="error_networks">Invalid entries: %1$s</string>
+    <string name="error_hostname">Hostname is required</string>
+
+    <string name="perm_ok">granted</string>
+    <string name="perm_missing">MISSING\nadb shell pm grant %1$s android.permission.WRITE_SECURE_SETTINGS</string>
+    <string name="status">Permission: %1$s\n\nCurrent Private DNS: %2$s\nActive network DNS: %3$s\nDetected location: %4$s\n\nLast action: %5$s</string>
+</resources>
