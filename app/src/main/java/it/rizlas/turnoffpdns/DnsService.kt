@@ -10,6 +10,8 @@ import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.IBinder
 
@@ -27,6 +29,13 @@ class DnsService : Service() {
         }
     }
 
+    /** Re-evaluates when a VPN comes up or goes down, even if it does not cover this app. */
+    private val vpnCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = DnsSwitcher.evaluateActive(this@DnsService)
+
+        override fun onLost(network: Network) = DnsSwitcher.evaluateActive(this@DnsService, network)
+    }
+
     override fun onCreate() {
         super.onCreate()
         val notification = buildNotification()
@@ -37,6 +46,11 @@ class DnsService : Service() {
         }
         cm = getSystemService(ConnectivityManager::class.java)
         cm.registerDefaultNetworkCallback(callback)
+        val vpnRequest = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+            .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            .build()
+        cm.registerNetworkCallback(vpnRequest, vpnCallback)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -50,6 +64,7 @@ class DnsService : Service() {
 
     override fun onDestroy() {
         cm.unregisterNetworkCallback(callback)
+        cm.unregisterNetworkCallback(vpnCallback)
         super.onDestroy()
     }
 

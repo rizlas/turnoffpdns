@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.LinkProperties
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.provider.Settings
 import android.util.Log
 import java.text.DateFormat
@@ -15,6 +17,7 @@ object DnsSwitcher {
     private const val KEY_MODE = "private_dns_mode"
     private const val KEY_SPECIFIER = "private_dns_specifier"
     private const val MODE_HOSTNAME = "hostname"
+    private const val MODE_OFF = "off"
 
     fun canWrite(ctx: Context): Boolean =
         ctx.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) ==
@@ -29,17 +32,34 @@ object DnsSwitcher {
     fun isHome(lp: LinkProperties, homeNetworks: List<Cidr>): Boolean =
         lp.dnsServers.any { dns -> homeNetworks.any { it.contains(dns) } }
 
-    /** Evaluates the current default network (used at startup and after saving). */
-    fun evaluateActive(ctx: Context) {
+    /**
+     * True if any connected network is a VPN, even one this app is excluded from.
+     * [ignore] skips a network that was just lost but may still be listed.
+     */
+    @Suppress("DEPRECATION")
+    fun isVpnActive(ctx: Context, ignore: Network? = null): Boolean {
         val cm = ctx.getSystemService(ConnectivityManager::class.java)
-        val lp = cm.activeNetwork?.let { cm.getLinkProperties(it) } ?: return
-        evaluate(ctx, lp)
+        return cm.allNetworks.any {
+            it != ignore && cm.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        }
+    }
+
+    /** Evaluates the current default network (used at startup and after saving). */
+    fun evaluateActive(ctx: Context, lostVpn: Network? = null) {
+        val cm = ctx.getSystemService(ConnectivityManager::class.java)
+        val active = cm.activeNetwork?.takeIf { it != lostVpn }
+        val lp = active?.let { cm.getLinkProperties(it) } ?: return
+        evaluate(ctx, lp, lostVpn)
     }
 
     @Synchronized
-    fun evaluate(ctx: Context, lp: LinkProperties) {
+    fun evaluate(ctx: Context, lp: LinkProperties, lostVpn: Network? = null) {
         val cfg = Config.load(ctx)
         if (!cfg.enabled) return
+        if (isVpnActive(ctx, lostVpn)) {
+            apply(ctx, MODE_OFF, null)
+            return
+        }
         val home = isHome(lp, Cidr.parseList(cfg.homeNetworks).first)
         if (home) apply(ctx, cfg.homeMode, null) else apply(ctx, MODE_HOSTNAME, cfg.awayHostname)
     }
