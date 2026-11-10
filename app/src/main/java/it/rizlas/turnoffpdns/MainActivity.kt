@@ -69,6 +69,8 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        // The service may have been killed (app update, OEM autostart restrictions).
+        if (Config.load(this).enabled) DnsService.start(this)
         refreshStatus()
     }
 
